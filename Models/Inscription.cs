@@ -10,6 +10,11 @@ namespace GestionClub
         private Membre membre;
         private Competition competition;
 
+        // Constructeur vide pour Entity Framework Core
+        private Inscription()
+        {
+        }
+
         public Inscription(Membre membre, Competition competition)
         {
             this.membre = membre;
@@ -33,11 +38,13 @@ namespace GestionClub
         public Membre Membre
         {
             get { return membre; }
+            private set { membre = value; }
         }
 
         public Competition Competition
         {
             get { return competition; }
+            private set { competition = value; }
         }
     }
 }

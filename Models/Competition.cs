@@ -12,7 +12,12 @@ namespace GestionClub
         private string categorie;
 
         private Discipline discipline;
-        private List<Inscription> inscriptions;
+        private List<Inscription> inscriptions = new List<Inscription>();
+
+        // Constructeur vide pour Entity Framework Core
+        private Competition()
+        {
+        }
 
         public Competition(int id, string nom, DateTime date, string lieu, string categorie, Discipline discipline)
         {
@@ -22,7 +27,6 @@ namespace GestionClub
             this.lieu = lieu;
             this.categorie = categorie;
             this.discipline = discipline;
-            this.inscriptions = new List<Inscription>();
         }
 
         public int Id
@@ -58,6 +62,7 @@ namespace GestionClub
         public Discipline Discipline
         {
             get { return discipline; }
+            set { discipline = value; }
         }
 
         public IReadOnlyList<Inscription> Inscriptions

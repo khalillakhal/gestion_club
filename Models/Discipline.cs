@@ -5,6 +5,11 @@ namespace GestionClub
         private int id;
         private string nom;
 
+        // Constructeur vide pour Entity Framework Core
+        private Discipline()
+        {
+        }
+
         public Discipline(int id, string nom)
         {
             this.id = id;

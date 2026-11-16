@@ -1,28 +1,23 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Microsoft.EntityFrameworkCore;
 
 namespace GestionClub
 {
+    // Objectif 3 : le Club ne garde plus ses données dans des listes en mémoire,
+    // il les lit et les enregistre dans la base SQLite via le ClubContext.
     public class Club
     {
         private string nom;
         private string adresse;
+        private ClubContext db;
 
-        private List<Membre> membres;
-        private List<Entraineur> entraineurs;
-        private List<Discipline> disciplines;
-        private List<SeanceEntrainement> seances;
-        private List<Competition> competitions;
-
-        public Club(string nom, string adresse)
+        public Club(string nom, string adresse, ClubContext db)
         {
             this.nom = nom;
             this.adresse = adresse;
-            this.membres = new List<Membre>();
-            this.entraineurs = new List<Entraineur>();
-            this.disciplines = new List<Discipline>();
-            this.seances = new List<SeanceEntrainement>();
-            this.competitions = new List<Competition>();
+            this.db = db;
         }
 
         public string Nom
@@ -37,30 +32,50 @@ namespace GestionClub
             set { adresse = value; }
         }
 
+        // ===================== Lecture =====================
+
         public List<Membre> Membres
         {
-            get { return membres; }
+            get { return db.Membres.OrderBy(m => m.Nom).ThenBy(m => m.Prenom).ToList(); }
         }
 
         public List<Entraineur> Entraineurs
         {
-            get { return entraineurs; }
+            get { return db.Entraineurs.OrderBy(e => e.Nom).ToList(); }
         }
 
         public List<Discipline> Disciplines
         {
-            get { return disciplines; }
+            get { return db.Disciplines.OrderBy(d => d.Nom).ToList(); }
         }
 
         public List<SeanceEntrainement> Seances
         {
-            get { return seances; }
+            get
+            {
+                // Include : charge aussi l'entraîneur, la discipline et les participants
+                return db.Seances
+                    .Include(s => s.Entraineur)
+                    .Include(s => s.Discipline)
+                    .Include(s => s.Participants)
+                    .OrderBy(s => s.Date)
+                    .ToList();
+            }
         }
 
         public List<Competition> Competitions
         {
-            get { return competitions; }
+            get
+            {
+                return db.Competitions
+                    .Include(c => c.Discipline)
+                    .Include(c => c.Inscriptions)
+                    .OrderBy(c => c.Date)
+                    .ToList();
+            }
         }
+
+        // ===================== Membres =====================
 
         public void AjouterMembre(Membre m)
         {
@@ -69,12 +84,24 @@ namespace GestionClub
                 throw new ArgumentNullException(nameof(m));
             }
 
-            if (RechercherMembre(m.Id) != null)
+            db.Membres.Add(m);
+            db.SaveChanges();           // INSERT (l'Id est généré par la base)
+        }
+
+        public void ModifierMembre(Membre m)
+        {
+            if (m == null)
             {
-                throw new InvalidOperationException($"Un membre avec l'identifiant {m.Id} existe déjà.");
+                throw new ArgumentNullException(nameof(m));
             }
 
-            membres.Add(m);
+            // Le membre a été lu avec ce même contexte : EF Core a suivi les modifications.
+            // Update() ne sert que si l'objet ne vient pas de ce contexte.
+            if (db.Entry(m).State == EntityState.Detached)
+            {
+                db.Membres.Update(m);
+            }
+            db.SaveChanges();           // UPDATE
         }
 
         public void SupprimerMembre(int id)
@@ -86,20 +113,24 @@ namespace GestionClub
                 throw new InvalidOperationException($"Aucun membre avec l'identifiant {id}.");
             }
 
-            membres.Remove(m);
+            db.Membres.Remove(m);
+            db.SaveChanges();           // DELETE
         }
 
         public Membre RechercherMembre(int id)
         {
-            foreach (Membre m in membres)
-            {
-                if (m.Id == id)
-                {
-                    return m;
-                }
-            }
+            return db.Membres.Find(id); // null si introuvable
+        }
 
-            return null;
+        // ===================== Séances =====================
+
+        public SeanceEntrainement RechercherSeance(int id)
+        {
+            return db.Seances
+                .Include(s => s.Entraineur)
+                .Include(s => s.Discipline)
+                .Include(s => s.Participants)
+                .FirstOrDefault(s => s.Id == id);
         }
 
         public void AjouterSeance(SeanceEntrainement s)
@@ -109,8 +140,38 @@ namespace GestionClub
                 throw new ArgumentNullException(nameof(s));
             }
 
-            seances.Add(s);
+            db.Seances.Add(s);
+            db.SaveChanges();
         }
+
+        public void ModifierSeance(SeanceEntrainement s)
+        {
+            if (s == null)
+            {
+                throw new ArgumentNullException(nameof(s));
+            }
+
+            if (db.Entry(s).State == EntityState.Detached)
+            {
+                db.Seances.Update(s);
+            }
+            db.SaveChanges();
+        }
+
+        public void SupprimerSeance(int id)
+        {
+            SeanceEntrainement s = db.Seances.Find(id);
+
+            if (s == null)
+            {
+                throw new InvalidOperationException($"Aucune séance avec l'identifiant {id}.");
+            }
+
+            db.Seances.Remove(s);
+            db.SaveChanges();
+        }
+
+        // ===================== Compétitions =====================
 
         public void AjouterCompetition(Competition c)
         {
@@ -119,7 +180,8 @@ namespace GestionClub
                 throw new ArgumentNullException(nameof(c));
             }
 
-            competitions.Add(c);
+            db.Competitions.Add(c);
+            db.SaveChanges();
         }
     }
 }

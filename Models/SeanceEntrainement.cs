@@ -5,9 +5,7 @@ namespace GestionClub
 {
     public class SeanceEntrainement
     {
-        private static int prochainId = 1;
-
-        private int id;
+        private int id;   // généré automatiquement par la base de données
         private DateTime date;
         private TimeSpan duree;
         private string lieu;
@@ -15,23 +13,27 @@ namespace GestionClub
 
         private Entraineur entraineur;
         private Discipline discipline;
-        private List<Membre> participants;
+        private List<Membre> participants = new List<Membre>();
+
+        // Constructeur vide pour Entity Framework Core
+        private SeanceEntrainement()
+        {
+        }
 
         public SeanceEntrainement(DateTime date, TimeSpan duree, string lieu, Entraineur entraineur, Discipline discipline)
         {
-            this.id = prochainId++;
             this.date = date;
             this.duree = duree;
             this.lieu = lieu;
             this.annulee = false;
             this.entraineur = entraineur;
             this.discipline = discipline;
-            this.participants = new List<Membre>();
         }
 
         public int Id
         {
             get { return id; }
+            private set { id = value; }
         }
 
         public DateTime Date
@@ -55,16 +57,19 @@ namespace GestionClub
         public bool Annulee
         {
             get { return annulee; }
+            private set { annulee = value; }
         }
 
         public Entraineur Entraineur
         {
             get { return entraineur; }
+            set { entraineur = value; }
         }
 
         public Discipline Discipline
         {
             get { return discipline; }
+            set { discipline = value; }
         }
 
         public IReadOnlyList<Membre> Participants

@@ -7,6 +7,11 @@ namespace GestionClub
         private DateTime dateInscription;
         private bool cotisationPayee;
 
+        // Constructeur vide pour Entity Framework Core
+        private Membre()
+        {
+        }
+
         public Membre(int id, string nom, string prenom, DateTime dateNaissance, string email, string telephone)
             : base(id, nom, prenom, dateNaissance, email, telephone)
         {

@@ -11,6 +11,11 @@ namespace GestionClub
         private string email;
         private string telephone;
 
+        // Constructeur vide utilisé par Entity Framework Core pour recréer les objets lus en base
+        protected Personne()
+        {
+        }
+
         protected Personne(int id, string nom, string prenom, DateTime dateNaissance, string email, string telephone)
         {
             this.id = id;
@@ -60,6 +65,12 @@ namespace GestionClub
         public virtual string AfficherInfos()
         {
             return $"{id} - {prenom} {nom} | Né(e) le {dateNaissance:dd/MM/yyyy} | {email} | {telephone}";
+        }
+
+        // Utilisé par les listes déroulantes (ComboBox) des interfaces
+        public override string ToString()
+        {
+            return prenom + " " + nom;
         }
     }
 }

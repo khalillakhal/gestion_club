@@ -6,6 +6,11 @@ namespace GestionClub
     {
         private string specialite;
 
+        // Constructeur vide pour Entity Framework Core
+        private Entraineur()
+        {
+        }
+
         public Entraineur(int id, string nom, string prenom, DateTime dateNaissance, string email, string telephone, string specialite)
             : base(id, nom, prenom, dateNaissance, email, telephone)
         {
