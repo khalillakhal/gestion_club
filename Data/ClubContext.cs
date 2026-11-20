@@ -82,21 +82,12 @@ namespace GestionClub
             });
         }
 
-        // Place club.db dans le dossier du projet (celui qui contient le .csproj) :
-        // l'application et les migrations utilisent le même fichier,
-        // et il est poussé sur GitHub avec le code.
+        // La base club.db est placée dans le même dossier que l'exécutable
+        // (bin\Debug\net10.0-windows\GestionClub.exe).
         public static string CheminBase()
         {
-            string depart = Path.GetDirectoryName(typeof(ClubContext).Assembly.Location);
-            DirectoryInfo dossier = new DirectoryInfo(depart);
-
-            while (dossier != null && dossier.GetFiles("*.csproj").Length == 0)
-            {
-                dossier = dossier.Parent;
-            }
-
-            string racine = dossier != null ? dossier.FullName : depart;
-            return Path.Combine(racine, "club.db");
+            string dossierExecutable = Path.GetDirectoryName(typeof(ClubContext).Assembly.Location);
+            return Path.Combine(dossierExecutable, "club.db");
         }
     }
 }
