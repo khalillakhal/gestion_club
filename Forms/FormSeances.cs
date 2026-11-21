@@ -161,6 +161,9 @@ namespace GestionClub
         private void BtnAjouter_Click(object sender, EventArgs e)
         {
             if (!FormulaireValide()) return;
+            if (!CreneauDisponible((Entraineur)cmbEntraineur.SelectedItem, txtLieu.Text,
+        dtpDate.Value, TimeSpan.FromMinutes((double)nudDuree.Value), 0))
+                return;
 
             try
             {
@@ -194,6 +197,9 @@ namespace GestionClub
                 return;
             }
             if (!FormulaireValide()) return;
+            if (!CreneauDisponible((Entraineur)cmbEntraineur.SelectedItem, txtLieu.Text,
+        dtpDate.Value, TimeSpan.FromMinutes((double)nudDuree.Value), seanceSelectionnee.Id))
+                return;
 
             try
             {
@@ -261,6 +267,44 @@ namespace GestionClub
         // ---------------------------------------------------------------
         // Outils
         // ---------------------------------------------------------------
+        // Vérifie qu'aucune autre séance (non annulée) ne se chevauche
+        // avec le même entraîneur ou au même lieu.
+        // idIgnore : la séance en cours de modification (0 pour une nouvelle séance).
+        private bool CreneauDisponible(Entraineur entraineur, string lieu, DateTime debut, TimeSpan duree, int idIgnore)
+        {
+            DateTime fin = debut + duree;
+
+            foreach (SeanceEntrainement s in club.Seances)
+            {
+                if (s.Id == idIgnore || s.Annulee)
+                    continue;
+
+                DateTime finExistante = s.Date + s.Duree;
+                bool chevauche = s.Date < fin && debut < finExistante;
+                if (!chevauche)
+                    continue;
+
+                if (s.Entraineur.Id == entraineur.Id)
+                {
+                    MessageBox.Show(
+                        $"{entraineur} anime déjà une séance de {s.Discipline} " +
+                        $"de {s.Date:HH:mm} à {finExistante:HH:mm} le {s.Date:dd/MM/yyyy} ({s.Lieu}).",
+                        "Conflit d'horaire", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
+
+                if (string.Equals(s.Lieu.Trim(), lieu.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    MessageBox.Show(
+                        $"Le lieu « {s.Lieu} » est déjà occupé de {s.Date:HH:mm} à {finExistante:HH:mm} " +
+                        $"le {s.Date:dd/MM/yyyy} (séance de {s.Discipline} avec {s.Entraineur}).",
+                        "Conflit d'horaire", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
+            }
+
+            return true;
+        }
         private bool FormulaireValide()
         {
             if (cmbEntraineur.SelectedItem == null || cmbDiscipline.SelectedItem == null)
