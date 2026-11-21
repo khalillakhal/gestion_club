@@ -5,22 +5,14 @@ Mini-projet de Programmation Avancée : gestion des membres, du planning des ent
 Application **Windows Forms** (.NET 10) avec **Entity Framework Core** (approche **Code First**) et une base **SQLite** (`club.db`).
 
 ## Lancer le projet
-Nécessite Visual Studio avec le SDK .NET 10. Ouvrir GestionClub.csproj puis F5 : la base club.db est copiée automatiquement à côté de l'exécutable.
 
-1. Ouvrir le projet dans Visual Studio (ou `dotnet restore` en ligne de commande).
-2. Créer la base avec les migrations (une seule fois) :
-   - Console du Gestionnaire de package :
-     ```
-     Add-Migration InitialCreate
-     Update-Database
-     ```
-   - ou en ligne de commande :
-     ```
-     dotnet tool install --global dotnet-ef
-     dotnet ef migrations add InitialCreate
-     dotnet ef database update
-     ```
-3. Lancer l'application (F5 ou `dotnet run`).
+Nécessite Visual Studio avec le SDK .NET 10.
+
+1. Ouvrir `GestionClub.slnx` (ou `GestionClub.csproj`) dans Visual Studio.
+2. Lancer avec F5.
+
+La base `club.db` est copiée automatiquement à côté de l'exécutable (`bin\Debug\net10.0-windows\`).
+Si elle est absente, elle est recréée au démarrage à partir des migrations (`Database.Migrate()`).
 
 ## Objectif 3 : intégration de la base de données
 
