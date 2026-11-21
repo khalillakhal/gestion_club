@@ -9,6 +9,7 @@ namespace GestionClub
     // Interface CRUD des membres : Créer, Lire (liste), Modifier, Supprimer
     public class FormMembres : Form
     {
+        private const int AgeMinimum = 5;   // âge minimum pour s'inscrire au club
         private readonly ClubContext db = new ClubContext();
         private readonly Club club;
         private Membre membreSelectionne;   // membre cliqué dans la liste (null si aucun)
@@ -50,7 +51,8 @@ namespace GestionClub
             txtTelephone = AjouterTextBox(grp, "Téléphone :", ref y);
             dtpInscription = AjouterDate(grp, "Inscrit le :", ref y);
 
-            chkCotisation = new CheckBox { Text = "Cotisation payée", Location = new Point(130, y), AutoSize = true };
+            // Lecture seule : la cotisation ne change que par le bouton "Payer la cotisation"
+            chkCotisation = new CheckBox { Text = "Cotisation payée", Location = new Point(130, y), AutoSize = true, AutoCheck = false };
             grp.Controls.Add(chkCotisation);
             y += 45;
 
@@ -159,7 +161,7 @@ namespace GestionClub
         // ---------------------------------------------------------------
         private void BtnAjouter_Click(object sender, EventArgs e)
         {
-            if (!FormulaireValide()) return;
+            if (!FormulaireValide(0)) return;
 
             try
             {
@@ -186,7 +188,7 @@ namespace GestionClub
                 MessageBox.Show("Sélectionnez d'abord un membre dans la liste.");
                 return;
             }
-            if (!FormulaireValide()) return;
+            if (!FormulaireValide(membreSelectionne.Id)) return;
 
             try
             {
@@ -235,12 +237,21 @@ namespace GestionClub
                 return;
             }
 
+            if (membreSelectionne.CotisationPayee)
+            {
+                MessageBox.Show($"La cotisation de {membreSelectionne} est déjà payée.",
+                    "Cotisation", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
             try
             {
                 membreSelectionne.PayerCotisation();       // méthode du diagramme de classes
                 club.ModifierMembre(membreSelectionne);
                 chkCotisation.Checked = true;
                 ChargerMembres();
+                MessageBox.Show($"Cotisation de {membreSelectionne} enregistrée.",
+                    "Cotisation", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
@@ -251,18 +262,70 @@ namespace GestionClub
         // ---------------------------------------------------------------
         // Outils
         // ---------------------------------------------------------------
-        private bool FormulaireValide()
+        // idIgnore : Id du membre en cours de modification (0 pour un ajout)
+        private bool FormulaireValide(int idIgnore)
         {
-            if (txtNom.Text.Trim() == "" || txtPrenom.Text.Trim() == "")
+            string nom = txtNom.Text.Trim();
+            string prenom = txtPrenom.Text.Trim();
+            string email = txtEmail.Text.Trim();
+            DateTime naissance = dtpNaissance.Value.Date;
+            DateTime inscription = dtpInscription.Value.Date;
+
+            if (nom == "" || prenom == "")
             {
                 MessageBox.Show("Le nom et le prénom sont obligatoires.");
                 return false;
             }
-            if (txtEmail.Text.Trim() != "" && !txtEmail.Text.Contains("@"))
+
+            if (email != "" && !email.Contains("@"))
             {
                 MessageBox.Show("L'email n'est pas valide.");
                 return false;
             }
+
+            // Date de naissance : dans le passé et âge minimum
+            if (naissance > DateTime.Today.AddYears(-AgeMinimum))
+            {
+                MessageBox.Show($"Date de naissance incorrecte : le membre doit avoir au moins {AgeMinimum} ans.");
+                return false;
+            }
+
+            // Date d'inscription : après la naissance et pas dans le futur
+            if (inscription < naissance)
+            {
+                MessageBox.Show("La date d'inscription ne peut pas être antérieure à la date de naissance.");
+                return false;
+            }
+            if (inscription > DateTime.Today)
+            {
+                MessageBox.Show("La date d'inscription ne peut pas être dans le futur.");
+                return false;
+            }
+
+            // Doublons : même email, ou mêmes nom + prénom + date de naissance
+            foreach (Membre m in club.Membres)
+            {
+                if (m.Id == idIgnore)
+                    continue;
+
+                if (email != "" && m.Email != null &&
+                    string.Equals(m.Email.Trim(), email, StringComparison.OrdinalIgnoreCase))
+                {
+                    MessageBox.Show($"Cet email est déjà utilisé par {m}.", "Doublon",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
+
+                if (string.Equals(m.Nom.Trim(), nom, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(m.Prenom.Trim(), prenom, StringComparison.OrdinalIgnoreCase) &&
+                    m.DateNaissance.Date == naissance)
+                {
+                    MessageBox.Show($"{m} (né(e) le {naissance:dd/MM/yyyy}) est déjà inscrit(e) au club.", "Doublon",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
+            }
+
             return true;
         }
 
@@ -274,7 +337,6 @@ namespace GestionClub
             m.Email = txtEmail.Text.Trim();
             m.Telephone = txtTelephone.Text.Trim();
             m.DateInscription = dtpInscription.Value.Date;
-            m.CotisationPayee = chkCotisation.Checked;
         }
 
         private void ViderChamps()

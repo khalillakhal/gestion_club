@@ -160,10 +160,8 @@ namespace GestionClub
         // ---------------------------------------------------------------
         private void BtnAjouter_Click(object sender, EventArgs e)
         {
-            if (!FormulaireValide()) return;
-            if (!CreneauDisponible((Entraineur)cmbEntraineur.SelectedItem, txtLieu.Text,
-        dtpDate.Value, TimeSpan.FromMinutes((double)nudDuree.Value), 0))
-                return;
+            // 0 : nouvelle séance
+            if (!FormulaireValide(0)) return;
 
             try
             {
@@ -172,7 +170,7 @@ namespace GestionClub
 
                 // Méthode du diagramme : c'est l'entraîneur qui planifie la séance
                 SeanceEntrainement seance = entraineur.PlanifierSeance(
-                    dtpDate.Value,
+                    DateSaisie(),
                     TimeSpan.FromMinutes((double)nudDuree.Value),
                     txtLieu.Text.Trim(),
                     discipline);
@@ -196,16 +194,22 @@ namespace GestionClub
                 MessageBox.Show("Sélectionnez d'abord une séance dans la liste.");
                 return;
             }
-            if (!FormulaireValide()) return;
-            if (!CreneauDisponible((Entraineur)cmbEntraineur.SelectedItem, txtLieu.Text,
-        dtpDate.Value, TimeSpan.FromMinutes((double)nudDuree.Value), seanceSelectionnee.Id))
+
+            if (seanceSelectionnee.Annulee)
+            {
+                MessageBox.Show("Cette séance est annulée : elle ne peut plus être modifiée.",
+                    "Séance annulée", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
+            }
+
+            // On passe l'Id pour que la séance ne soit pas comparée avec elle-même
+            if (!FormulaireValide(seanceSelectionnee.Id)) return;
 
             try
             {
                 seanceSelectionnee.Entraineur = (Entraineur)cmbEntraineur.SelectedItem;
                 seanceSelectionnee.Discipline = (Discipline)cmbDiscipline.SelectedItem;
-                seanceSelectionnee.Date = dtpDate.Value;
+                seanceSelectionnee.Date = DateSaisie();
                 seanceSelectionnee.Duree = TimeSpan.FromMinutes((double)nudDuree.Value);
                 seanceSelectionnee.Lieu = txtLieu.Text.Trim();
 
@@ -251,6 +255,17 @@ namespace GestionClub
                 MessageBox.Show("Sélectionnez d'abord une séance dans la liste.");
                 return;
             }
+
+            if (seanceSelectionnee.Annulee)
+            {
+                MessageBox.Show("Cette séance est déjà annulée.",
+                    "Séance annulée", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            DialogResult reponse = MessageBox.Show("Annuler cette séance ?", "Confirmation",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (reponse != DialogResult.Yes) return;
 
             try
             {
@@ -305,7 +320,14 @@ namespace GestionClub
 
             return true;
         }
-        private bool FormulaireValide()
+        // Date et heure saisies, arrondies à la minute (sans les secondes)
+        private DateTime DateSaisie()
+        {
+            DateTime v = dtpDate.Value;
+            return new DateTime(v.Year, v.Month, v.Day, v.Hour, v.Minute, 0);
+        }
+        // idIgnore : Id de la séance en cours de modification (0 pour une nouvelle séance)
+        private bool FormulaireValide(int idIgnore)
         {
             if (cmbEntraineur.SelectedItem == null || cmbDiscipline.SelectedItem == null)
             {
@@ -317,7 +339,32 @@ namespace GestionClub
                 MessageBox.Show("Le lieu est obligatoire.");
                 return false;
             }
-            return true;
+
+            Entraineur entraineur = (Entraineur)cmbEntraineur.SelectedItem;
+            Discipline discipline = (Discipline)cmbDiscipline.SelectedItem;
+            DateTime debut = DateSaisie();
+            TimeSpan duree = TimeSpan.FromMinutes((double)nudDuree.Value);
+
+            // Pas de séance dans le passé
+            if (debut <= DateTime.Now)
+            {
+                MessageBox.Show("La date et l'heure de la séance doivent être dans le futur.");
+                return false;
+            }
+
+            // L'entraîneur doit être spécialisé dans la discipline de la séance
+            string specialite = entraineur.Specialite == null ? "" : entraineur.Specialite.Trim();
+            if (!string.Equals(specialite, discipline.Nom.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show(
+                    $"{entraineur} est spécialisé(e) en {specialite} : " +
+                    $"il/elle ne peut pas animer une séance de {discipline.Nom}.",
+                    "Discipline incompatible", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            // Pas de conflit d'horaire (même entraîneur ou même lieu)
+            return CreneauDisponible(entraineur, txtLieu.Text, debut, duree, idIgnore);
         }
 
         private void ViderChamps()
